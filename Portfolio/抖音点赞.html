@@ -3,170 +3,654 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>点赞交互 Demo（模拟）</title>
+<title>抖音点赞工具 · 美化版</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #111;
-    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  :root{
+    --douyin-cyan:#25F4EE;
+    --douyin-red:#FE2C55;
+    --douyin-black:#000;
+    --douyin-dark:#0f0f10;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:24px 16px;
+    background:var(--douyin-black);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;position:relative;
+    -webkit-font-smoothing:antialiased;
   }
 
-  .card {
-    width: 300px;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #1c1c1e;
-    box-shadow: 0 12px 40px rgba(0,0,0,.6);
-    position: relative;
+  /* ===== 动态彩色背景 ===== */
+  .bg-glow{
+    position:fixed;inset:-30%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(circle at 22% 28%, rgba(37,244,238,.28), transparent 42%),
+      radial-gradient(circle at 78% 30%, rgba(254,44,85,.30), transparent 45%),
+      radial-gradient(circle at 50% 82%, rgba(140,60,255,.28), transparent 48%);
+    filter:blur(28px);
+    animation:bgFloat 16s ease-in-out infinite alternate;
+  }
+  @keyframes bgFloat{
+    0%  {transform:translate(0,0) scale(1);}
+    50% {transform:translate(2%,-2%) scale(1.06);}
+    100%{transform:translate(-2%,2%) scale(1.02);}
   }
 
-  .cover {
-    height: 400px;
-    background: linear-gradient(135deg, #2b2b33, #4a4a58);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #888;
-    font-size: 14px;
+  /* 星点粒子 */
+  .bg-stars{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .bg-stars i{
+    position:absolute;width:3px;height:3px;border-radius:50%;
+    background:#fff;opacity:.5;
+    animation:twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{opacity:.15;transform:scale(.7);}
+    50%    {opacity:.85;transform:scale(1.3);}
   }
 
-  .side {
-    position: absolute;
-    right: 12px;
-    bottom: 70px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
+  /* ===== 手机卡片 ===== */
+  .phone{
+    position:relative;z-index:2;
+    width:330px;border-radius:26px;overflow:hidden;
+    background:linear-gradient(180deg,#161618,#0b0b0c);
+    border:1px solid rgba(255,255,255,.09);
+    box-shadow:
+      0 30px 80px -20px rgba(0,0,0,.9),
+      0 0 0 1px rgba(37,244,238,.10),
+      0 0 60px -18px rgba(254,44,85,.55);
+    animation:cardIn .7s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  @keyframes cardIn{
+    from{opacity:0;transform:translateY(26px) scale(.96);}
+    to  {opacity:1;transform:none;}
   }
 
-  .like-btn {
-    width: 48px;
-    height: 48px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255,255,255,.12);
-    backdrop-filter: blur(6px);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform .15s ease, background .2s;
-    position: relative;
+  /* 顶部状态栏 */
+  .statusbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px 6px;font-size:11px;color:#9a9aa0;letter-spacing:.4px;
   }
-  .like-btn:hover { background: rgba(255,255,255,.2); }
-  .like-btn:active { transform: scale(.88); }
-
-  .like-btn svg {
-    width: 26px;
-    height: 26px;
-    fill: #fff;
-    transition: fill .2s;
+  .statusbar .right{display:flex;gap:5px;align-items:center;}
+  .statusbar .bar{
+    width:14px;height:8px;border:1px solid #9a9aa0;border-radius:2px;
+    position:relative;
+  }
+  .statusbar .bar::after{
+    content:"";position:absolute;inset:1px;width:60%;
+    background:var(--douyin-cyan);border-radius:1px;
   }
 
-  .like-btn.liked svg { fill: #fe2c55; }
+  /* 视频画面区 */
+  .cover{
+    position:relative;height:430px;
+    background:
+      radial-gradient(120% 90% at 30% 15%, rgba(37,244,238,.22), transparent 55%),
+      radial-gradient(120% 90% at 75% 85%, rgba(254,44,85,.28), transparent 55%),
+      linear-gradient(160deg,#20202a,#141418 60%,#0d0d10);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  /* 视频里的流动光带 */
+  .cover::before{
+    content:"";position:absolute;inset:-50%;
+    background:conic-gradient(from 0deg,
+      transparent 0deg, rgba(37,244,238,.14) 70deg,
+      transparent 140deg, rgba(254,44,85,.16) 220deg,
+      transparent 300deg);
+    animation:spin 9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
 
-  .like-btn.pop { animation: pop .45s ease; }
-  @keyframes pop {
-    0%   { transform: scale(1); }
-    35%  { transform: scale(1.35); }
-    60%  { transform: scale(.92); }
-    100% { transform: scale(1); }
+  .cover .hint{
+    position:relative;z-index:1;text-align:center;color:#7c7c86;
+    font-size:13px;letter-spacing:1px;line-height:2;
+  }
+  .cover .hint .big{
+    display:block;font-size:26px;font-weight:800;
+    background:linear-gradient(90deg,var(--douyin-cyan),var(--douyin-red));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    letter-spacing:2px;margin-bottom:6px;
   }
 
-  .count {
-    color: #fff;
-    font-size: 12px;
-    margin-top: 4px;
-    font-variant-numeric: tabular-nums;
+  /* 底部信息 */
+  .meta{
+    position:relative;z-index:2;padding:14px 16px 4px;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.85) 42%);
+    margin-top:-70px;
+  }
+  .meta .user{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .meta .avatar{
+    width:30px;height:30px;border-radius:50%;flex:none;
+    background:linear-gradient(135deg,var(--douyin-cyan),var(--douyin-red));
+    display:grid;place-items:center;font-size:13px;font-weight:800;color:#000;
+  }
+  .meta .name{font-size:13px;font-weight:700;color:#fff;}
+  .meta .tag{
+    font-size:10px;padding:2px 7px;border-radius:99px;
+    background:rgba(254,44,85,.16);color:var(--douyin-red);
+    font-weight:700;letter-spacing:.4px;
+  }
+  .meta .desc{font-size:12px;color:#c9c9d1;line-height:1.65;}
+  .meta .desc em{color:var(--douyin-cyan);font-style:normal;}
+
+  /* ===== 右侧操作栏 ===== */
+  .side{
+    position:absolute;right:12px;bottom:96px;z-index:3;
+    display:flex;flex-direction:column;align-items:center;gap:20px;
+  }
+  .act{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .act .num{
+    font-size:11px;color:#fff;font-weight:600;
+    font-variant-numeric:tabular-nums;text-shadow:0 1px 4px rgba(0,0,0,.8);
   }
 
-  /* 飘心特效 */
-  .heart {
-    position: absolute;
-    left: 50%;
-    bottom: 100%;
-    font-size: 16px;
-    pointer-events: none;
-    animation: floatUp .9s ease-out forwards;
+  /* 圆形按钮通用 */
+  .circle{
+    width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+    display:grid;place-items:center;position:relative;
+    background:rgba(255,255,255,.10);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    transition:transform .15s ease,background .25s;
   }
-  @keyframes floatUp {
-    0%   { opacity: 1; transform: translate(-50%, 0) scale(.5) rotate(0deg); }
-    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), -90px) scale(1.3) rotate(var(--rot)); }
+  .circle:hover{background:rgba(255,255,255,.2);}
+  .circle:active{transform:scale(.86);}
+  .circle svg{width:24px;height:24px;fill:#fff;transition:fill .22s;}
+
+  /* 点赞按钮专属 */
+  #likeBtn{
+    width:52px;height:52px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.06);
   }
+  #likeBtn.liked{
+    background:radial-gradient(circle at 50% 45%, rgba(254,44,85,.35), rgba(255,255,255,.08));
+    box-shadow:
+      0 0 0 1px rgba(254,44,85,.5),
+      0 0 26px -4px rgba(254,44,85,.9);
+  }
+  #likeBtn.liked svg{fill:var(--douyin-red);}
+  #likeBtn.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1);}
+  @keyframes pop{
+    0%  {transform:scale(1);}
+    30% {transform:scale(1.42);}
+    55% {transform:scale(.88);}
+    75% {transform:scale(1.10);}
+    100%{transform:scale(1);}
+  }
+
+  /* 双色描边小圆点（模仿抖音音乐碟） */
+  .disc{
+    width:46px;height:46px;border-radius:50%;flex:none;
+    background:conic-gradient(from 0deg,var(--douyin-cyan),var(--douyin-red),#8c3cff,var(--douyin-cyan));
+    display:grid;place-items:center;
+    animation:spin 5s linear infinite;
+    box-shadow:0 0 20px -6px rgba(37,244,238,.8);
+  }
+  .disc span{
+    width:18px;height:18px;border-radius:50%;
+    background:#0b0b0c;display:grid;place-items:center;
+    font-size:9px;color:#fff;
+  }
+
+  /* ===== 飘心特效层 ===== */
+  .fx{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;}
+  .heart{
+    position:absolute;bottom:120px;font-size:20px;
+    animation:floatUp 1.05s ease-out forwards;
+    will-change:transform,opacity;
+  }
+  @keyframes floatUp{
+    0%  {opacity:1;transform:translate(0,0) scale(.4) rotate(0deg);}
+    25% {opacity:1;transform:translate(calc(var(--dx)*.35),-26px) scale(1.15) rotate(calc(var(--rot)*.3));}
+    100%{opacity:0;transform:translate(var(--dx),-140px) scale(1.3) rotate(var(--rot));}
+  }
+  /* 环形扩散波 */
+  .ripple{
+    position:absolute;width:14px;height:14px;border-radius:50%;
+    border:2px solid var(--douyin-red);pointer-events:none;
+    animation:ripple .7s ease-out forwards;
+  }
+  @keyframes ripple{
+    0%  {opacity:.85;transform:scale(.4);}
+    100%{opacity:0;transform:scale(6);}
+  }
+
+  /* 双击大爱心 */
+  .big-heart{
+    position:absolute;left:50%;top:44%;font-size:80px;
+    transform:translate(-50%,-50%) scale(.3);opacity:0;
+    pointer-events:none;
+    animation:bigHeart .9s ease-out forwards;
+    filter:drop-shadow(0 0 24px rgba(254,44,85,.9));
+  }
+  @keyframes bigHeart{
+    0%  {opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-14deg);}
+    35% {opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(6deg);}
+    70% {opacity:1;transform:translate(-50%,-50%) scale(.98) rotate(0deg);}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.35) rotate(0deg);}
+  }
+
+  /* ===== 底部进度 / 音乐条 ===== */
+  .musicbar{
+    position:relative;z-index:3;
+    display:flex;align-items:center;gap:10px;
+    padding:12px 16px 16px;background:#0b0b0c;
+  }
+  .musicbar .note{
+    display:flex;align-items:flex-end;gap:2px;height:14px;flex:none;
+  }
+  .musicbar .note i{
+    width:3px;background:linear-gradient(180deg,var(--douyin-cyan),var(--douyin-red));
+    border-radius:2px;animation:eq .9s ease-in-out infinite;
+  }
+  .musicbar .note i:nth-child(1){height:6px; animation-delay:0s;}
+  .musicbar .note i:nth-child(2){height:13px;animation-delay:.15s;}
+  .musicbar .note i:nth-child(3){height:9px; animation-delay:.3s;}
+  .musicbar .note i:nth-child(4){height:14px;animation-delay:.45s;}
+  @keyframes eq{
+    0%,100%{transform:scaleY(.4);}
+    50%    {transform:scaleY(1);}
+  }
+  .musicbar .note.paused i{animation-play-state:paused;}
+
+  .musicbar .txt{
+    flex:1;font-size:11px;color:#8a8a93;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .musicbar .txt b{color:#c9c9d1;font-weight:600;}
+
+  .music-btn{
+    flex:none;border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);color:#c9c9d1;
+    width:32px;height:32px;border-radius:50%;cursor:pointer;
+    display:grid;place-items:center;font-size:13px;
+    transition:background .2s,color .2s,border-color .2s;
+  }
+  .music-btn:hover{background:rgba(255,255,255,.14);color:#fff;}
+  .music-btn.on{
+    background:linear-gradient(135deg,rgba(37,244,238,.22),rgba(254,44,85,.22));
+    border-color:rgba(37,244,238,.5);color:#fff;
+  }
+
+  /* 顶部提示条 */
+  .toast{
+    position:fixed;top:26px;left:50%;z-index:99;
+    transform:translate(-50%,-24px);opacity:0;
+    padding:10px 20px;border-radius:99px;font-size:13px;color:#fff;
+    background:linear-gradient(135deg,rgba(37,244,238,.9),rgba(254,44,85,.9));
+    box-shadow:0 12px 32px -10px rgba(254,44,85,.9);
+    pointer-events:none;transition:opacity .3s,transform .3s;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
 </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="cover">视频区域（占位）</div>
+<div class="bg-glow"></div>
+<div class="bg-stars" id="stars"></div>
 
-  <div class="side">
-    <div style="text-align:center;">
-      <button class="like-btn" id="likeBtn" aria-pressed="false" aria-label="点赞">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 21s-7.5-4.7-9.7-9.1C.7 8.6 2.3 5 5.7 4.3c2-.4 4 .5 5.1 2.2h2.4c1.1-1.7 3.1-2.6 5.1-2.2 3.4.7 5 4.3 3.4 7.6C19.5 16.3 12 21 12 21z"/>
-        </svg>
-      </button>
-      <div class="count" id="likeCount">1.2w</div>
+<div class="phone" id="phone">
+  <!-- 状态栏 -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="right">
+      <span>5G</span>
+      <span class="bar"></span>
+    </span>
+  </div>
+
+  <!-- 视频区 -->
+  <div class="cover" id="cover">
+    <div class="hint">
+      <span class="big">DOUYIN</span>
+      双击屏幕试试 ❤️
     </div>
+
+    <!-- 特效层 -->
+    <div class="fx" id="fx"></div>
+
+    <!-- 右侧操作栏 -->
+    <div class="side">
+      <div class="act">
+        <div class="disc"><span>♪</span></div>
+      </div>
+
+      <div class="act">
+        <button class="circle" id="likeBtn" aria-pressed="false" aria-label="点赞">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 21s-7.5-4.7-9.7-9.1C.7 8.6 2.3 5 5.7 4.3c2-.4 4 .5 5.1 2.2h2.4c1.1-1.7 3.1-2.6 5.1-2.2 3.4.7 5 4.3 3.4 7.6C19.5 16.3 12 21 12 21z"/>
+          </svg>
+        </button>
+        <span class="num" id="likeCount">1.2w</span>
+      </div>
+
+      <div class="act">
+        <button class="circle" aria-label="评论">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 2H4a2 2 0 0 0-2 2v18l4.6-4H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+          </svg>
+        </button>
+        <span class="num">3682</span>
+      </div>
+
+      <div class="act">
+        <button class="circle" aria-label="分享">
+          <svg viewBox="0 0 24 24">
+            <path d="M18 16.1c-.8 0-1.5.3-2 .8l-7.1-4.2c.1-.2.1-.5.1-.7s0-.5-.1-.7L16 7.1c.5.5 1.2.8 2 .8a3 3 0 1 0-3-3c0 .3 0 .5.1.7L8 9.8A3 3 0 1 0 6 15c.8 0 1.5-.3 2-.8l7.1 4.2c-.1.2-.1.4-.1.6a3 3 0 1 0 3-2.9z"/>
+          </svg>
+        </button>
+        <span class="num">分享</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文案 -->
+  <div class="meta">
+    <div class="user">
+      <span class="avatar">D</span>
+      <span class="name">@抖音小助手</span>
+      <span class="tag">推荐</span>
+    </div>
+    <p class="desc">
+      双击屏幕有惊喜 ✨ <em>#点赞特效</em> <em>#抖音</em> <em>#前端动画</em>
+    </p>
+  </div>
+
+  <!-- 音乐条 -->
+  <div class="musicbar">
+    <div class="note paused" id="eq">
+      <i></i><i></i><i></i><i></i>
+    </div>
+    <div class="txt">
+      <b>原创音乐</b> · 点右下角播放 ♫
+    </div>
+    <button class="music-btn" id="musicBtn" title="播放 / 暂停背景音乐">▶</button>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-(function () {
-  const btn   = document.getElementById('likeBtn');
-  const count = document.getElementById('likeCount');
+(function(){
+  "use strict";
 
-  let liked = false;
-  let base  = 12000;   // 假装的基础点赞数
+  /* ============ 背景星点 ============ */
+  (function makeStars(){
+    var box = document.getElementById("stars");
+    var frag = document.createDocumentFragment();
+    var colors = ["#25F4EE","#FE2C55","#8C3CFF","#ffffff"];
+    for (var i = 0; i < 46; i++){
+      var s = document.createElement("i");
+      s.style.left = Math.random()*100 + "%";
+      s.style.top  = Math.random()*100 + "%";
+      s.style.background = colors[i % colors.length];
+      s.style.animationDelay = (Math.random()*3).toFixed(2) + "s";
+      s.style.animationDuration = (2 + Math.random()*2.4).toFixed(2) + "s";
+      var sc = 0.5 + Math.random()*1.4;
+      s.style.transform = "scale(" + sc.toFixed(2) + ")";
+      frag.appendChild(s);
+    }
+    box.appendChild(frag);
+  })();
 
-  // 数字格式化：12000 -> 1.2w
-  function fmt(n) {
+  /* ============ 点赞逻辑 ============ */
+  var btn   = document.getElementById("likeBtn");
+  var count = document.getElementById("likeCount");
+  var fx    = document.getElementById("fx");
+  var cover = document.getElementById("cover");
+  var toastEl = document.getElementById("toast");
+
+  var liked = false;
+  var base  = 12000;
+
+  function fmt(n){
     if (n < 10000) return String(n);
-    return (n / 10000).toFixed(1).replace(/\.0$/, '') + 'w';
+    return (n / 10000).toFixed(1).replace(/\.0$/, "") + "w";
   }
 
-  // 生成飘心
-  function spawnHearts(n) {
-    for (let i = 0; i < n; i++) {
-      const h = document.createElement('span');
-      h.className = 'heart';
-      h.textContent = ['❤️', '💗', '💖'][i % 3];
-      h.style.setProperty('--dx',  (Math.random() * 60 - 30).toFixed(0) + 'px');
-      h.style.setProperty('--rot', (Math.random() * 60 - 30).toFixed(0) + 'deg');
-      h.style.animationDelay = (i * 60) + 'ms';
-      btn.appendChild(h);
-      setTimeout(() => h.remove(), 1000 + i * 60);
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ toastEl.classList.remove("show"); }, 1400);
+  }
+
+  /* 在指定位置生成飘心 */
+  function spawnHearts(n, x, y){
+    for (var i = 0; i < n; i++){
+      (function(i){
+        var h = document.createElement("span");
+        h.className = "heart";
+        var icons = ["❤️","💗","💖","💕","🩷"];
+        h.textContent = icons[i % icons.length];
+        h.style.left = x + "px";
+        h.style.top  = y + "px";
+        h.style.bottom = "auto";
+        h.style.setProperty("--dx",  (Math.random()*90 - 45).toFixed(0) + "px");
+        h.style.setProperty("--rot", (Math.random()*70 - 35).toFixed(0) + "deg");
+        h.style.fontSize = (16 + Math.random()*12).toFixed(0) + "px";
+        h.style.animationDelay = (i * 55) + "ms";
+        fx.appendChild(h);
+        setTimeout(function(){ h.remove(); }, 1200 + i * 55);
+      })(i);
     }
   }
 
-  function update() {
-    btn.classList.toggle('liked', liked);
-    btn.setAttribute('aria-pressed', liked);
+  /* 环形扩散波 */
+  function spawnRipple(x, y){
+    var r = document.createElement("span");
+    r.className = "ripple";
+    r.style.left = x + "px";
+    r.style.top  = y + "px";
+    fx.appendChild(r);
+    setTimeout(function(){ r.remove(); }, 750);
+  }
+
+  function update(){
+    btn.classList.toggle("liked", liked);
+    btn.setAttribute("aria-pressed", liked);
     count.textContent = fmt(base + (liked ? 1 : 0));
   }
 
-  btn.addEventListener('click', () => {
+  /* 点击点赞 */
+  btn.addEventListener("click", function(){
     liked = !liked;
     update();
 
-    if (liked) {
-      // 重新触发 pop 动画
-      btn.classList.remove('pop');
+    if (liked){
+      btn.classList.remove("pop");
       void btn.offsetWidth;
-      btn.classList.add('pop');
-      spawnHearts(5);
+      btn.classList.add("pop");
+
+      var r = btn.getBoundingClientRect();
+      var c = cover.getBoundingClientRect();
+      spawnRipple(r.left - c.left + r.width/2, r.top - c.top + r.height/2);
+      spawnHearts(6, r.left - c.left - 6, r.top - c.top - 4);
+      toast("❤️ 点赞成功");
+    } else {
+      toast("取消点赞");
     }
   });
 
+  /* 双击画面 = 大爱心 */
+  var lastTap = 0;
+  cover.addEventListener("click", function(e){
+    // 点到按钮区域不处理
+    if (e.target.closest(".side")) return;
+
+    var now = Date.now();
+    if (now - lastTap < 300){
+      var c = cover.getBoundingClientRect();
+      var x = e.clientX - c.left;
+      var y = e.clientY - c.top;
+
+      var big = document.createElement("span");
+      big.className = "big-heart";
+      big.textContent = "❤️";
+      big.style.left = x + "px";
+      big.style.top  = y + "px";
+      fx.appendChild(big);
+      setTimeout(function(){ big.remove(); }, 950);
+
+      spawnRipple(x, y);
+
+      if (!liked){
+        liked = true;
+        update();
+        btn.classList.remove("pop");
+        void btn.offsetWidth;
+        btn.classList.add("pop");
+        toast("❤️ 双击点赞成功");
+      }
+    }
+    lastTap = now;
+  });
+
   update();
+
+  /* ============ 背景音乐（Web Audio 合成，无需音频文件） ============ */
+  var musicBtn = document.getElementById("musicBtn");
+  var eq = document.getElementById("eq");
+
+  var audioCtx = null;
+  var masterGain = null;
+  var schedulerId = null;
+  var step = 0;
+  var isPlaying = false;
+
+  // 一段轻快的循环旋律（音名 + 时值，单位：拍）
+  var BPM = 112;
+  var beat = 60 / BPM;
+  // 简谱：1=C，用 Hz 表示。这里用 C 大调五声音阶，听起来更"国风/流行"
+  var N = {
+    C4:261.63, D4:293.66, E4:329.63, G4:392.00, A4:440.00,
+    C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880.00,
+    R:0  // 休止
+  };
+  // [频率, 拍数]
+  var MELODY = [
+    [N.E4,0.5],[N.G4,0.5],[N.A4,1.0],[N.G4,0.5],[N.E4,0.5],
+    [N.D4,1.0],[N.E4,0.5],[N.G4,0.5],[N.A4,1.0],
+    [N.C5,0.5],[N.A4,0.5],[N.G4,1.0],[N.E4,0.5],[N.D4,0.5],
+    [N.C4,1.0],[N.D4,0.5],[N.E4,0.5],[N.G4,1.0],
+    [N.A4,0.5],[N.G4,0.5],[N.E4,1.0],[N.D4,0.5],[N.C4,0.5],
+    [N.D4,2.0],[N.R, 0.5],[N.R, 0.5]
+  ];
+  // 低音伴奏（每拍一个根音）
+  var BASS = [N.C4, N.C4, N.G4/2, N.G4/2, N.A4/2, N.A4/2, N.E4/2, N.E4/2];
+
+  function playNote(freq, startTime, dur, type, vol){
+    if (!freq) return;
+    var osc  = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    var attack = 0.012, release = Math.min(0.35, dur * 0.6);
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(vol, startTime + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.max(attack + 0.02, dur - release));
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(startTime);
+    osc.stop(startTime + dur + 0.05);
+  }
+
+  function scheduleLoop(){
+    if (!isPlaying) return;
+
+    var now = audioCtx.currentTime;
+    var lookahead = 0.35;
+    var nextTime = (scheduleLoop._next || now + 0.08);
+
+    while (nextTime < now + lookahead){
+      var item = MELODY[step % MELODY.length];
+      var dur  = item[1] * beat;
+
+      // 主旋律
+      playNote(item[0], nextTime, dur * 0.95, "triangle", 0.16);
+
+      // 每两拍加一个低音
+      if (step % 2 === 0){
+        var b = BASS[(step / 2) % BASS.length];
+        playNote(b / 2, nextTime, beat * 2 * 0.9, "sine", 0.10);
+      }
+
+      // 每拍轻轻一个高音点缀
+      if (step % 4 === 2){
+        playNote(N.C5 * 2, nextTime, 0.08, "sine", 0.045);
+      }
+
+      nextTime += dur;
+      step++;
+    }
+
+    scheduleLoop._next = nextTime;
+  }
+
+  function startMusic(){
+    if (!audioCtx){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC){ toast("浏览器不支持 Web Audio"); return; }
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.0;
+      masterGain.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    isPlaying = true;
+    step = 0;
+    scheduleLoop._next = audioCtx.currentTime + 0.08;
+
+    // 淡入
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, audioCtx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime + 0.8);
+
+    clearInterval(schedulerId);
+    schedulerId = setInterval(scheduleLoop, 120);
+    scheduleLoop();
+
+    musicBtn.textContent = "❚❚";
+    musicBtn.classList.add("on");
+    eq.classList.remove("paused");
+    toast("♫ 背景音乐已开启");
+  }
+
+  function stopMusic(){
+    isPlaying = false;
+    clearInterval(schedulerId);
+    schedulerId = null;
+
+    if (audioCtx && masterGain){
+      masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      masterGain.gain.setValueAtTime(masterGain.gain.value, audioCtx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
+    }
+
+    musicBtn.textContent = "▶";
+    musicBtn.classList.remove("on");
+    eq.classList.add("paused");
+    toast("已暂停音乐");
+  }
+
+  musicBtn.addEventListener("click", function(){
+    if (isPlaying) stopMusic(); else startMusic();
+  });
+
+  // 空格键也可以切换音乐
+  document.addEventListener("keydown", function(e){
+    if (e.code === "Space" && e.target === document.body){
+      e.preventDefault();
+      musicBtn.click();
+    }
+  });
 })();
 </script>
-
 </body>
 </html>
